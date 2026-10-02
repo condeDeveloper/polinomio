@@ -1,0 +1,50 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O juiz e a DEFINICAO: a multiplicacao ingenua, cada termo contra cada
+      # termo. Karatsuba e conferido em 2.000 pares com graus dos dois lados do
+      # corte, mais os graus EXATAMENTE no corte um por um, porque o limite entre
+      # a recursao e o caso base e onde um erro de "menor" contra "menor ou igual"
+      # se esconde, e ele nao da excecao: da um coeficiente errado no meio.
+      #
+      # Na transformada nao ha tolerancia nenhuma. Num corpo finito ela e exata, e
+      # qualquer diferenca e defeito e nao arredondamento. E essa a diferenca para
+      # a FFT em double, onde a partir de certo tamanho o arredondamento erra.
+      #
+      # Na interpolacao o juiz e o teorema de unicidade: Lagrange soma polinomios
+      # base e Newton monta diferencas divididas, dois caminhos sem nada em comum,
+      # e eles tem de dar o MESMO polinomio coeficiente a coeficiente em fracao
+      # exata. E nas raizes o juiz e a construcao: monta-se o polinomio a partir
+      # das raizes que se quer e exige-se que a busca devolva exatamente aquelas.
+      - name: testes
+        run: dotnet test testes/Polinomio.Testes/Polinomio.Testes.csproj -c Release --nologo -v q
+
+      # As medidas rodam para REGISTRAR numeros. Nao ha asseveracao de tempo.
+      - name: karatsuba contra a ingenua
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release --nologo -- karatsuba
+
+      - name: onde o karatsuba passa a valer a pena
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release --nologo -- corte
+
+      - name: a transformada teorica dos numeros
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release --nologo -- transformada
